@@ -1,88 +1,37 @@
-name: Compile Stripped Mesa Zink for Android
+name: Compile Stripped Mesa Zink for Android 12
 
-on:
-  workflow_dispatch:
+on: [workflow_dispatch]
 
 jobs:
   build-zink:
     runs-on: ubuntu-22.04
-
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Install System Dependencies
+      - uses: actions/checkout@v4
+      - name: Install Tools
+        run: sudo apt-get update && sudo apt-get install -y meson ninja-build
+      - name: Sparse-Download NDK
         run: |
-          sudo apt-get update
-          sudo apt-get install -y git python3-pip ninja-build cmake bison flex xz-utils curl unzip
-
-      - name: Setup Python, Meson and Mako
+          git clone --filter=blob:none --sparse --depth 1 https://googlesource.com ndk-light
+          cd ndk-light && git sparse-checkout set platform/sysroot toolchains/llvm/prebuilt/linux-x86_64
+          echo "ANDROID_NDK_ROOT=$(pwd)/ndk-light" >> $GITHUB_ENV
+      - name: Fetch Mesa
+        run: git clone --depth 1 --branch mesa-25.0.0 https://freedesktop.org mesa-src
+      - name: Create Cross-File
         run: |
-          python3 -m pip install --upgrade pip
-          pip3 install meson mako
-
-      - name: Download and Extract Android NDK r26b
-        run: |
-          curl -L -o ndk.zip https://google.com
-          unzip -q ndk.zip
-          rm ndk.zip
-          echo "ANDROID_NDK_ROOT=$(pwd)/android-ndk-r26b" >> $GITHUB_ENV
-
-      - name: Fetch Upstream Mesa 25.0.0
-        run: |
-          git clone --depth 1 --branch mesa-25.0.0 https://freedesktop.org mesa-src
-
-      - name: Generate Meson Android Cross-File
-        run: |
-          cat << 'EOF' > mesa-src/android-aarch64.txt
+          cat << 'EOF' > mesa-src/android12-aarch64.txt
           [binaries]
-          c = '${{ env.ANDROID_NDK_ROOT }}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android34-clang'
-          cpp = '${{ env.ANDROID_NDK_ROOT }}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android34-clang++'
-          ar = '${{ env.ANDROID_NDK_ROOT }}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar'
-          strip = '${{ env.ANDROID_NDK_ROOT }}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip'
-
+          c = '${{ env.ANDROID_NDK_ROOT }}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android31-clang'
+          cpp = '${{ env.ANDROID_NDK_ROOT }}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android31-clang++'
           [host_machine]
           system = 'android'
           cpu_family = 'aarch64'
-          cpu = 'armv8-a'
-          endian = 'little'
           EOF
-
-      - name: Configure and Strip Mesa Build Structure
+      - name: Build Zink
         run: |
-          cd mesa-src
-          meson setup build-zink-only \
-            --cross-file android-aarch64.txt \
-            -Dbuildtype=release \
-            -Dgallium-drivers=zink \
-            -Dvulkan-drivers=[] \
-            -Dopengl=true \
-            -Dgles1=disabled \
-            -Dgles2=disabled \
-            -Degl=disabled \
-            -Dgbm=disabled \
-            -Dglx=disabled \
-            -Dplatforms=android \
-            -Dllvm=disabled \
-            -Dshared-glapi=enabled \
-            -Dgallium-vdpau=disabled \
-            -Dgallium-va=disabled \
-            -Dvideo-codecs=[]
-
-      - name: Compile Standalone Zink Binary
-        run: |
-          cd mesa-src
-          ninja -C build-zink-only
-
-      - name: Locate and Prepare Output Artifacts
-        run: |
-          mkdir -p output/
-          find mesa-src/build-zink-only/ -name "libGL.so" -exec cp {} output/ \;
-          find mesa-src/build-zink-only/ -name "libgallium_dri.so" -exec cp {} output/ \; || true
-
-      - name: Upload Stripped libGL Binary
+          cd mesa-src && meson setup build --cross-file android12-aarch64.txt -Dgallium-drivers=zink -Dplatform-sdk-version=31
+          ninja -C build
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Mesa-25.0.0-Zink-Stripped-ARM64
-          path: output/
-          if-no-files-found: error
+          name: Mesa-Zink-Android12
+          path: mesa-src/build/src/gallium/targets/libgl-xlib/libGL.so
