@@ -14,18 +14,18 @@ jobs:
       - name: Install System Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y git python3-pip ninja-build cmake bison flex xz-utils wget unzip
+          sudo apt-get install -y git python3-pip ninja-build cmake bison flex xz-utils
 
       - name: Setup Python, Meson and Mako
         run: |
           python3 -m pip install --upgrade pip
           pip3 install meson mako
 
-      - name: Setup Android NDK
-        run: |
-          wget https://google.com
-          unzip -q android-ndk-r25c-linux.zip
-          echo "ANDROID_NDK_ROOT=$(pwd)/android-ndk-r25c" >> $GITHUB_ENV
+      - name: Setup Android NDK (Cached and Managed)
+        uses: android-actions/setup-ndk@v3
+        with:
+          ndk-version: r25c
+          add-to-path: true
 
       - name: Fetch Upstream Mesa 25.0.0
         run: |
