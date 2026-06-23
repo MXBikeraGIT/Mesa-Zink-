@@ -23,7 +23,7 @@ jobs:
 
       - name: Locate Pre-Cached Android NDK
         run: |
-          # Locate the highest pre-cached r25/r26/r27 NDK on the GitHub runner
+          # Finds the system-installed Android NDK path on the GitHub runner
           NDK_PATH=$(find /usr/local/lib/android/sdk/ndk -maxdepth 1 -mindepth 1 | sort -V | tail -n 1)
           echo "Found pre-installed NDK at: $NDK_PATH"
           echo "ANDROID_NDK_ROOT=$NDK_PATH" >> $GITHUB_ENV
