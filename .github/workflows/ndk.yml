@@ -1,31 +1,44 @@
-name: Setup Android NDK r27c
+name: Push Android NDK r27c to Mesa-Zink-
 
 on:
-  push:
-    branches: [ "main" ]
   workflow_dispatch:
 
 jobs:
-  download-ndk:
+  upload-ndk-to-repo:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      # Step 1: Clone the destination repository where the folder needs to go
+      - name: Checkout Mesa-Zink- repository
         uses: actions/checkout@v4
+        with:
+          repository: 'MXBikeraGIT/Mesa-Zink-'
+          token: ${{ secrets.NDK_PUSH_TOKEN }}
+          path: 'Mesa-Zink-'
 
-      - name: Create local NDK directory
-        run: mkdir -p ndk
+      # Step 2: Create the local target directory inside the checked-out repo
+      - name: Create NDK directory
+        run: mkdir -p Mesa-Zink-/ndk
 
+      # Step 3: Fetch and extract NDK via Action 
       - name: Setup Android NDK via Action
         id: setup-ndk
         uses: nttld/setup-ndk@v1
         with:
           ndk-version: r27c
-          local-cache: true
+          local-cache: false
 
-      - name: Move NDK to repository folder
+      # Step 4: Move the extracted files into the cloned repository's ndk folder
+      - name: Move NDK files into repository
         run: |
-          mv ${{ steps.setup-ndk.outputs.ndk-path }}/* ndk/
+          mv ${{ steps.setup-ndk.outputs.ndk-path }}/* Mesa-Zink-/ndk/
 
-      - name: Verify NDK placement
-        run: ls -la ndk
+      # Step 5: Configure Git, stage the files, commit, and push directly to GitHub
+      - name: Commit and Push NDK to GitHub
+        run: |
+          cd Mesa-Zink-
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add ndk/
+          git commit -m "chore: add Android NDK r27c binaries"
+          git push origin HEAD
