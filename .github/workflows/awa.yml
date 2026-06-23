@@ -7,8 +7,12 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout repository (your fork, if you have patches)
         uses: actions/checkout@v4
+
+      - name: Clone Mesa 25.0.0
+        run: |
+          git clone --depth 1 --branch mesa-25.0.0 https://gitlab.freedesktop.org/mesa/mesa.git
 
       - name: Install dependencies
         run: |
@@ -59,7 +63,7 @@ jobs:
       - name: Copy libGL.so.1.5.0
         run: |
           mkdir -p artifacts
-          cp build/src/gallium/targets/dri/libgallium_dri.so artifacts/libGL.so.1.5.0
+          cp mesa/build/src/gallium/targets/dri/libgallium_dri.so artifacts/libGL.so.1.5.0
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
