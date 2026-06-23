@@ -64,7 +64,9 @@ jobs:
             -Dopengl=true \
             -Dgles1=disabled \
             -Dgles2=disabled \
-            -Dglvnd=disabled
+            -Dglvnd=disabled \
+            -Ddri=disabled \
+            -Ddri3=disabled
           ninja -C build
 
       - name: Copy libGL.so.1.5.0
