@@ -13,22 +13,19 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Create NDK directory
+      - name: Create local NDK directory
         run: mkdir -p ndk
 
-      - name: Download Android NDK r27c
-        run: |
-          curl -L -o ndk.zip https://google.com
+      - name: Setup Android NDK via Action
+        id: setup-ndk
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r27c
+          local-cache: true
 
-      - name: Extract NDK to target folder
+      - name: Move NDK to repository folder
         run: |
-          unzip -q ndk.zip -d ndk
-          rm ndk.zip
-
-      - name: Clean up folder structure
-        run: |
-          mv ndk/android-ndk-r27c/* ndk/
-          rmdir ndk/android-ndk-r27c
+          mv ${{ steps.setup-ndk.outputs.ndk-path }}/* ndk/
 
       - name: Verify NDK placement
         run: ls -la ndk
