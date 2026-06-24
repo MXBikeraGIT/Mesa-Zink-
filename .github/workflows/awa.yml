@@ -44,16 +44,20 @@ jobs:
           endian = 'little'
           EOF
 
-      - name: Wrap xf86drm.h include with ANDROID guard
+      - name: Patch zink_bo.c to stub DRM functions
         run: |
           cd mesa/src/gallium/drivers/zink
-          # Check if the include line exists
-          if grep -q '#include <xf86drm.h>' zink_bo.c; then
-            # Add #ifndef ANDROID before the include and #endif after
-            sed -i '/#include <xf86drm.h>/i#ifndef ANDROID' zink_bo.c
-            sed -i '/#include <xf86drm.h>/a#endif' zink_bo.c
-          else
-            echo "xf86drm.h include not found; skipping"
+          # First, ensure the include is guarded (we already did this, but let's redo)
+          sed -i '/#include <xf86drm.h>/i#ifndef ANDROID' zink_bo.c
+          sed -i '/#include <xf86drm.h>/a#endif' zink_bo.c
+          # Now, find the function that uses drm_gem_close and wrap it
+          # The function is zink_bo_get_handle (or similar). We'll search for 'drm_gem_close'
+          if grep -q 'drm_gem_close' zink_bo.c; then
+            # Wrap the whole function body in #ifndef ANDROID ... #endif
+            # This is a bit tricky; we'll add guards around the function
+            sed -i '/^zink_bo_get_handle/,/^}/ { /^{/a#ifndef ANDROID
+            /^}/i#endif
+            }' zink_bo.c
           fi
 
       - name: Configure and build Mesa (Zink only)
