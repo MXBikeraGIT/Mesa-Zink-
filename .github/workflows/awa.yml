@@ -65,8 +65,7 @@ jobs:
             -Dgles1=disabled \
             -Dgles2=disabled \
             -Dglvnd=disabled \
-            -Ddri=false \
-            -Dgbm=false
+            -Ddri-drivers=
           ninja -C build
 
       - name: Copy libGL.so.1.5.0
