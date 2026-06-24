@@ -14,7 +14,7 @@ jobs:
         run: |
           git clone --depth 1 --branch mesa-25.0.0 https://gitlab.freedesktop.org/mesa/mesa.git
 
-      - name: Install dependencies
+      - name: Install dependencies (including libdrm-dev)
         run: |
           sudo apt update
           sudo apt install -y python3-pip meson ninja-build pkg-config \
@@ -49,6 +49,7 @@ jobs:
           export ANDROID_NDK=${{ steps.ndk.outputs.ndk-path }}
           export CFLAGS="-DETIME=ETIMEDOUT"
           export CXXFLAGS="-DETIME=ETIMEDOUT"
+          export PKG_CONFIG_PATH="/usr/lib/x86_64-linux-gnu/pkgconfig"
           cd mesa
           meson setup build \
             --cross-file ../android-aarch64.txt \
@@ -64,8 +65,7 @@ jobs:
             -Dopengl=true \
             -Dgles1=disabled \
             -Dgles2=disabled \
-            -Dglvnd=disabled \
-            -Ddrm=disabled
+            -Dglvnd=disabled
           ninja -C build
 
       - name: Copy libGL.so.1.5.0
