@@ -14,7 +14,7 @@ jobs:
         run: |
           git clone --depth 1 --branch mesa-25.0.0 https://gitlab.freedesktop.org/mesa/mesa.git
 
-      - name: Install dependencies (including libdrm-dev)
+      - name: Install dependencies
         run: |
           sudo apt update
           sudo apt install -y python3-pip meson ninja-build pkg-config \
@@ -44,12 +44,32 @@ jobs:
           endian = 'little'
           EOF
 
+      - name: Patch zink_bo.c to remove xf86drm.h dependency
+        run: |
+          cd mesa
+          cat > xf86drm.patch << 'EOF'
+          diff --git a/src/gallium/drivers/zink/zink_bo.c b/src/gallium/drivers/zink/zink_bo.c
+          index a1b2c3d..e4f5g6h 100644
+          --- a/src/gallium/drivers/zink/zink_bo.c
+          +++ b/src/gallium/drivers/zink/zink_bo.c
+          @@ -37,7 +37,9 @@
+           #include "zink_resource.h"
+           #include "zink_screen.h"
+           #include "zink_descriptors.h"
+          +#ifndef ANDROID
+           #include <xf86drm.h>
+          +#endif
+           #include <vulkan/vulkan.h>
+           
+           #include "util/u_hash.h"
+          EOF
+          patch -p1 < xf86drm.patch
+
       - name: Configure and build Mesa (Zink only)
         run: |
           export ANDROID_NDK=${{ steps.ndk.outputs.ndk-path }}
-          export CFLAGS="-DETIME=ETIMEDOUT"
-          export CXXFLAGS="-DETIME=ETIMEDOUT"
-          export PKG_CONFIG_PATH="/usr/lib/x86_64-linux-gnu/pkgconfig"
+          export CFLAGS="-DETIME=ETIMEDOUT -DANDROID"
+          export CXXFLAGS="-DETIME=ETIMEDOUT -DANDROID"
           cd mesa
           meson setup build \
             --cross-file ../android-aarch64.txt \
