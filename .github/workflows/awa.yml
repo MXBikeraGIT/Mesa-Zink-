@@ -44,26 +44,17 @@ jobs:
           endian = 'little'
           EOF
 
-      - name: Patch zink_bo.c to remove xf86drm.h dependency
+      - name: Wrap xf86drm.h include with ANDROID guard
         run: |
-          cd mesa
-          cat > xf86drm.patch << 'EOF'
-          diff --git a/src/gallium/drivers/zink/zink_bo.c b/src/gallium/drivers/zink/zink_bo.c
-          index a1b2c3d..e4f5g6h 100644
-          --- a/src/gallium/drivers/zink/zink_bo.c
-          +++ b/src/gallium/drivers/zink/zink_bo.c
-          @@ -37,7 +37,9 @@
-           #include "zink_resource.h"
-           #include "zink_screen.h"
-           #include "zink_descriptors.h"
-          +#ifndef ANDROID
-           #include <xf86drm.h>
-          +#endif
-           #include <vulkan/vulkan.h>
-           
-           #include "util/u_hash.h"
-          EOF
-          patch -p1 < xf86drm.patch
+          cd mesa/src/gallium/drivers/zink
+          # Check if the include line exists
+          if grep -q '#include <xf86drm.h>' zink_bo.c; then
+            # Add #ifndef ANDROID before the include and #endif after
+            sed -i '/#include <xf86drm.h>/i#ifndef ANDROID' zink_bo.c
+            sed -i '/#include <xf86drm.h>/a#endif' zink_bo.c
+          else
+            echo "xf86drm.h include not found; skipping"
+          fi
 
       - name: Configure and build Mesa (Zink only)
         run: |
